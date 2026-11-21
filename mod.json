@@ -1,0 +1,16 @@
+{
+    "geode": "v5.11.2",
+    "gd": {
+        "android": "*"
+    },
+    "id": "daniel.custom-difficulties",
+    "name": "Custom Difficulties",
+    "version": "v1.0.0",
+    "developer": "Daniel",
+    "description": "Adds custom difficulties to Geometry Dash.",
+    "resources": {
+        "sprites": [
+            "resources/difficulties/*.png"
+        ]
+    }
+}
