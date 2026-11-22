@@ -24,6 +24,9 @@ static int getDifficulty(int id) {
 }
 
 static void saveDifficulty(int id, int value) {
+    if (value < -1 || value >= 3)
+        return;
+
     Mod::get()->setSavedValue<int>(
         fmt::format("level-{}", id), value
     );
@@ -38,14 +41,20 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
         if (!LevelInfoLayer::init(level, challenge))
             return false;
 
-        if (!level) return true;
+        if (!level)
+            return true;
 
         m_fields->levelID = level->m_levelID;
 
         auto menu = CCMenu::create();
+
         auto label = CCLabelBMFont::create(
-            "CUSTOM DIFFICULTY", "bigFont.fnt"
+            "CUSTOM DIFFICULTY",
+            "bigFont.fnt"
         );
+
+        if (!menu || !label)
+            return true;
 
         label->setScale(0.35f);
 
@@ -55,7 +64,11 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
             menu_selector(CustomLevelInfo::changeDifficulty)
         );
 
+        if (!button)
+            return true;
+
         menu->addChild(button);
+
         menu->setPosition({
             CCDirector::sharedDirector()->getWinSize().width / 2,
             45
@@ -69,24 +82,41 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
     }
 
     void updateDifficultyLabel() {
-        int value = getDifficulty(m_fields->levelID);
-        if (value < 0 || value >= 3) return;
-
-        auto label = CCLabelBMFont::create(
-            names[value], "bigFont.fnt"
+        auto oldLabel = this->getChildByID(
+            "custom-difficulty-info-label"_spr
         );
 
-        if (!label || !m_difficultySprite) return;
+        if (oldLabel)
+            oldLabel->removeFromParent();
+
+        int value = getDifficulty(m_fields->levelID);
+
+        if (value < 0 || value >= 3)
+            return;
+
+        auto label = CCLabelBMFont::create(
+            names[value],
+            "bigFont.fnt"
+        );
+
+        if (!label || !m_difficultySprite)
+            return;
 
         label->setScale(0.45f);
-        label->setPosition(m_difficultySprite->getPosition());
+        label->setPosition(
+            m_difficultySprite->getPosition()
+        );
+
+        label->setID("custom-difficulty-info-label"_spr);
 
         this->addChild(label, 100);
+
         m_difficultySprite->setOpacity(0);
     }
 
     void changeDifficulty(CCObject*) {
         int value = getDifficulty(m_fields->levelID);
+
         value = (value + 1) % 3;
 
         saveDifficulty(m_fields->levelID, value);
@@ -108,30 +138,44 @@ class $modify(CustomLevelCell, LevelCell) {
     void loadFromLevel(GJGameLevel* level) {
         LevelCell::loadFromLevel(level);
 
-        if (!level) return;
+        if (!level || !m_mainLayer)
+            return;
+
+        auto oldLabel = m_mainLayer->getChildByID(
+            "custom-difficulty-label"_spr
+        );
+
+        if (oldLabel)
+            oldLabel->removeFromParent();
 
         int value = getDifficulty(level->m_levelID);
 
-        if (value < 0 || value >= 3) return;
+        if (value < 0 || value >= 3)
+            return;
 
-        auto container =
-            m_mainLayer->getChildByID("difficulty-container");
+        auto container = m_mainLayer->getChildByID(
+            "difficulty-container"
+        );
 
-        if (!container) return;
+        if (!container)
+            return;
 
         auto original = container->getChildByID(
             "difficulty-sprite"
         );
 
-        if (!original) return;
+        if (!original)
+            return;
 
         original->setVisible(false);
 
         auto label = CCLabelBMFont::create(
-            shortNames[value], "bigFont.fnt"
+            shortNames[value],
+            "bigFont.fnt"
         );
 
-        if (!label) return;
+        if (!label)
+            return;
 
         label->setScale(0.4f);
         label->setPosition(original->getPosition());
