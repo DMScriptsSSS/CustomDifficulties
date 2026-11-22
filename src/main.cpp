@@ -125,7 +125,7 @@ class $modify(CustomLevelCell, LevelCell) {
 
         if (!original) return;
 
-        original->setOpacity(0);
+        original->setVisible(false);
 
         auto label = CCLabelBMFont::create(
             shortNames[value], "bigFont.fnt"
