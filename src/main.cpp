@@ -3,6 +3,7 @@
 #include <Geode/modify/LevelCell.hpp>
 #include <Geode/modify/LocalLevelManager.hpp>
 #include <Geode/modify/LevelTools.hpp>
+#include <unordered_set>
 
 using namespace geode::prelude;
 
@@ -58,9 +59,15 @@ class $modify(CustomLocalLevelManager, LocalLevelManager) {
     }
 };
 
-// Registra os dados da fase
+// Registra a fase 23
 class $modify(CustomLevelTools, LevelTools) {
-    GJGameLevel* getLevel(int levelID, bool loaded) {
+    static std::unordered_set<int> getLevelList() {
+        auto levels = LevelTools::getLevelList();
+        levels.insert(23);
+        return levels;
+    }
+
+    static GJGameLevel* getLevel(int levelID, bool loaded) {
         if (levelID != 23)
             return LevelTools::getLevel(levelID, loaded);
 
@@ -84,7 +91,7 @@ class $modify(CustomLevelTools, LevelTools) {
         return level;
     }
 
-    bool verifyLevelIntegrity(
+    static bool verifyLevelIntegrity(
         std::string verifyString,
         int levelID
     ) {
@@ -249,52 +256,5 @@ class $modify(CustomLevelCell, LevelCell) {
         label->setID("custom-difficulty-label"_spr);
 
         container->addChild(label);
-    }
-};
-
-#include <Geode/modify/BoomScrollLayer.hpp>
-
-class $modify(CustomLevelList, BoomScrollLayer) {
-    static BoomScrollLayer* create(
-        CCArray* pages,
-        int unk1,
-        bool unk2,
-        CCArray* levels,
-        DynamicScrollDelegate* delegate
-    ) {
-        if (
-            delegate &&
-            levels &&
-            exact_cast<LevelSelectLayer*>(delegate)
-        ) {
-            bool exists = false;
-
-            for (unsigned int i = 0; i < levels->count(); i++) {
-                auto level = typeinfo_cast<GJGameLevel*>(
-                    levels->objectAtIndex(i)
-                );
-
-                if (level && level->m_levelID == 23) {
-                    exists = true;
-                    break;
-                }
-            }
-
-            if (!exists) {
-                auto customLevel =
-                    GameLevelManager::get()->getMainLevel(23, 0);
-
-                if (customLevel)
-                    levels->addObject(customLevel);
-            }
-        }
-
-        return BoomScrollLayer::create(
-            pages,
-            unk1,
-            unk2,
-            levels,
-            delegate
-        );
     }
 };
