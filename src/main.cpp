@@ -1,7 +1,8 @@
-
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <Geode/modify/LevelCell.hpp>
+#include <Geode/modify/LocalLevelManager.hpp>
+#include <Geode/modify/LevelTools.hpp>
 
 using namespace geode::prelude;
 
@@ -32,6 +33,72 @@ static void saveDifficulty(int id, int value) {
     );
 }
 
+// Carrega os dados da fase personalizada
+class $modify(CustomLocalLevelManager, LocalLevelManager) {
+    gd::string getMainLevelString(int id) {
+        if (id != 23)
+            return LocalLevelManager::getMainLevelString(id);
+
+        auto file = CCString::createWithFormat(
+            "levels/level%i.txt"_spr,
+            id
+        );
+
+        if (!file)
+            return "";
+
+        auto content = CCString::createWithContentsOfFile(
+            file->getCString()
+        );
+
+        if (!content)
+            return "";
+
+        return gd::string(content->getCString());
+    }
+};
+
+// Registra os dados da fase
+class $modify(CustomLevelTools, LevelTools) {
+    GJGameLevel* getLevel(int levelID, bool loaded) {
+        if (levelID != 23)
+            return LevelTools::getLevel(levelID, loaded);
+
+        auto level = GJGameLevel::create();
+
+        if (!level)
+            return nullptr;
+
+        level->m_levelName = "iSpyWithMyLittleEye";
+        level->m_audioTrack = 0;
+
+        if (!loaded) {
+            level->m_levelString =
+                LocalLevelManager::sharedState()
+                    ->getMainLevelString(levelID);
+        }
+
+        level->m_levelID = levelID;
+        level->m_levelType = GJLevelType::Saved;
+
+        return level;
+    }
+
+    bool verifyLevelIntegrity(
+        gd::string verifyString,
+        int levelID
+    ) {
+        if (levelID == 23)
+            return true;
+
+        return LevelTools::verifyLevelIntegrity(
+            verifyString,
+            levelID
+        );
+    }
+};
+
+// Sistema de dificuldades personalizadas
 class $modify(CustomLevelInfo, LevelInfoLayer) {
     struct Fields {
         int levelID = 0;
@@ -185,3 +252,49 @@ class $modify(CustomLevelCell, LevelCell) {
     }
 };
 
+#include <Geode/modify/BoomScrollLayer.hpp>
+
+class $modify(CustomLevelList, BoomScrollLayer) {
+    static BoomScrollLayer* create(
+        CCArray* pages,
+        int unk1,
+        bool unk2,
+        CCArray* levels,
+        DynamicScrollDelegate* delegate
+    ) {
+        if (
+            delegate &&
+            levels &&
+            exact_cast<LevelSelectLayer*>(delegate)
+        ) {
+            bool exists = false;
+
+            for (unsigned int i = 0; i < levels->count(); i++) {
+                auto level = typeinfo_cast<GJGameLevel*>(
+                    levels->objectAtIndex(i)
+                );
+
+                if (level && level->m_levelID == 23) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                auto customLevel =
+                    GameLevelManager::get()->getMainLevel(23, 0);
+
+                if (customLevel)
+                    levels->addObject(customLevel);
+            }
+        }
+
+        return BoomScrollLayer::create(
+            pages,
+            unk1,
+            unk2,
+            levels,
+            delegate
+        );
+    }
+};
