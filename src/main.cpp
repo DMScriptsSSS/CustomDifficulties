@@ -35,7 +35,7 @@ static void saveDifficulty(int id, int value) {
 
 // Carrega os dados da fase personalizada
 class $modify(CustomLocalLevelManager, LocalLevelManager) {
-    gd::string getMainLevelString(int id) {
+    std::string getMainLevelString(int id) {
         if (id != 23)
             return LocalLevelManager::getMainLevelString(id);
 
@@ -54,7 +54,7 @@ class $modify(CustomLocalLevelManager, LocalLevelManager) {
         if (!content)
             return "";
 
-        return gd::string(content->getCString());
+        return std::string(content->getCString());
     }
 };
 
@@ -85,7 +85,7 @@ class $modify(CustomLevelTools, LevelTools) {
     }
 
     bool verifyLevelIntegrity(
-        gd::string verifyString,
+        std::string verifyString,
         int levelID
     ) {
         if (levelID == 23)
