@@ -34,9 +34,10 @@ static void saveDifficulty(int id, int value) {
     );
 }
 
-// Carrega os dados da fase personalizada
 class $modify(CustomLocalLevelManager, LocalLevelManager) {
     std::string getMainLevelString(int id) {
+        log::info("[CD] getMainLevelString chamado: {}", id);
+
         if (id != 23)
             return LocalLevelManager::getMainLevelString(id);
 
@@ -45,36 +46,49 @@ class $modify(CustomLocalLevelManager, LocalLevelManager) {
             id
         );
 
-        if (!file)
+        if (!file) {
+            log::error("[CD] Caminho do arquivo falhou");
             return "";
+        }
 
         auto content = CCString::createWithContentsOfFile(
             file->getCString()
         );
 
-        if (!content)
+        if (!content) {
+            log::error("[CD] Arquivo da fase 23 nao encontrado: {}",
+                file->getCString());
             return "";
+        }
 
+        log::info("[CD] Fase 23 carregada!");
         return std::string(content->getCString());
     }
 };
 
-// Registra a fase 23
 class $modify(CustomLevelTools, LevelTools) {
     static std::unordered_set<int> getLevelList() {
+        log::info("[CD] getLevelList chamado");
+
         auto levels = LevelTools::getLevelList();
         levels.insert(23);
+
+        log::info("[CD] Lista modificada. Total: {}", levels.size());
         return levels;
     }
 
     static GJGameLevel* getLevel(int levelID, bool loaded) {
+        log::info("[CD] getLevel chamado: {}", levelID);
+
         if (levelID != 23)
             return LevelTools::getLevel(levelID, loaded);
 
         auto level = GJGameLevel::create();
 
-        if (!level)
+        if (!level) {
+            log::error("[CD] Nao foi possivel criar GJGameLevel");
             return nullptr;
+        }
 
         level->m_levelName = "iSpyWithMyLittleEye";
         level->m_audioTrack = 0;
@@ -88,6 +102,7 @@ class $modify(CustomLevelTools, LevelTools) {
         level->m_levelID = levelID;
         level->m_levelType = GJLevelType::Saved;
 
+        log::info("[CD] Objeto da fase 23 criado");
         return level;
     }
 
@@ -95,8 +110,10 @@ class $modify(CustomLevelTools, LevelTools) {
         std::string verifyString,
         int levelID
     ) {
-        if (levelID == 23)
+        if (levelID == 23) {
+            log::info("[CD] Verificacao da fase 23");
             return true;
+        }
 
         return LevelTools::verifyLevelIntegrity(
             verifyString,
@@ -105,18 +122,25 @@ class $modify(CustomLevelTools, LevelTools) {
     }
 };
 
-// Sistema de dificuldades personalizadas
 class $modify(CustomLevelInfo, LevelInfoLayer) {
     struct Fields {
         int levelID = 0;
     };
 
     bool init(GJGameLevel* level, bool challenge) {
-        if (!LevelInfoLayer::init(level, challenge))
-            return false;
+        log::info("[CD] LevelInfoLayer::init entrou");
 
-        if (!level)
+        if (!LevelInfoLayer::init(level, challenge)) {
+            log::error("[CD] LevelInfoLayer::init retornou false");
+            return false;
+        }
+
+        log::info("[CD] LevelInfoLayer original inicializado");
+
+        if (!level) {
+            log::error("[CD] Level recebido e nulo");
             return true;
+        }
 
         m_fields->levelID = level->m_levelID;
 
@@ -127,8 +151,10 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
             "bigFont.fnt"
         );
 
-        if (!menu || !label)
+        if (!menu || !label) {
+            log::error("[CD] Falha ao criar menu ou texto");
             return true;
+        }
 
         label->setScale(0.35f);
 
@@ -138,17 +164,24 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
             menu_selector(CustomLevelInfo::changeDifficulty)
         );
 
-        if (!button)
+        if (!button) {
+            log::error("[CD] Falha ao criar botao");
             return true;
+        }
 
         menu->addChild(button);
 
+        auto size = CCDirector::sharedDirector()->getWinSize();
+
         menu->setPosition({
-            CCDirector::sharedDirector()->getWinSize().width / 2,
+            size.width / 2,
             45
         });
 
         this->addChild(menu, 100);
+
+        log::info("[CD] Botao adicionado. Level ID: {}",
+            m_fields->levelID);
 
         updateDifficultyLabel();
 
@@ -177,30 +210,22 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
             return;
 
         label->setScale(0.45f);
-        label->setPosition(
-            m_difficultySprite->getPosition()
-        );
-
+        label->setPosition(m_difficultySprite->getPosition());
         label->setID("custom-difficulty-info-label"_spr);
 
         this->addChild(label, 100);
-
         m_difficultySprite->setOpacity(0);
     }
 
     void changeDifficulty(CCObject*) {
         int value = getDifficulty(m_fields->levelID);
-
         value = (value + 1) % 3;
 
         saveDifficulty(m_fields->levelID, value);
 
         FLAlertLayer::create(
             "Custom Difficulties",
-            fmt::format(
-                "Saved: <cy>{}</c>",
-                names[value]
-            ),
+            fmt::format("Saved: <cy>{}</c>", names[value]),
             "OK"
         )->show();
 
@@ -210,17 +235,12 @@ class $modify(CustomLevelInfo, LevelInfoLayer) {
 
 class $modify(CustomLevelCell, LevelCell) {
     void loadFromLevel(GJGameLevel* level) {
+        log::info("[CD] LevelCell::loadFromLevel chamado");
+
         LevelCell::loadFromLevel(level);
 
         if (!level || !m_mainLayer)
             return;
-
-        auto oldLabel = m_mainLayer->getChildByID(
-            "custom-difficulty-label"_spr
-        );
-
-        if (oldLabel)
-            oldLabel->removeFromParent();
 
         int value = getDifficulty(level->m_levelID);
 
@@ -231,15 +251,19 @@ class $modify(CustomLevelCell, LevelCell) {
             "difficulty-container"
         );
 
-        if (!container)
+        if (!container) {
+            log::info("[CD] difficulty-container nao encontrado");
             return;
+        }
 
         auto original = container->getChildByID(
             "difficulty-sprite"
         );
 
-        if (!original)
+        if (!original) {
+            log::info("[CD] difficulty-sprite nao encontrado");
             return;
+        }
 
         original->setVisible(false);
 
